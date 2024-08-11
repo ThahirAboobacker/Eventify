@@ -1,13 +1,9 @@
 import 'dart:ui';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:universe2024/Utiles/app_styles.dart';
 import 'package:gap/gap.dart';
-
-
 import 'package:universe2024/org/addevent.dart';
 import 'package:universe2024/org/attendee.dart';
 import 'package:universe2024/org/qrscanner.dart';
@@ -18,12 +14,13 @@ import 'package:universe2024/pages/chatbot.dart';
 import 'package:universe2024/org/orgprofile.dart';
 import 'package:universe2024/pages/qrcode.dart';
 import 'package:universe2024/pages/search1.dart';
+import 'package:universe2024/pages/selfeventlist.dart';
 
 class SocHomePage extends StatefulWidget {
+  final String userId;
 
-  String userId;
+  SocHomePage({Key? key, required this.userId}) : super(key: key);
 
-   SocHomePage ({ Key? key, required this.userId }): super(key: key);
   @override
   _SocHomePageState createState() => _SocHomePageState();
 }
@@ -31,24 +28,24 @@ class SocHomePage extends StatefulWidget {
 class _SocHomePageState extends State<SocHomePage> {
   int _selectedIndex = 0;
   late Stream<List<Map<String, dynamic>>> _stream;
-
-  static List<Widget> _widgetOptions = <Widget>[
-    searchpage1(),
-    attendee(),
-    AddEvent(userID: "2CGHtfZZ2USbD0TfuUMMwKgwxAB2"),
-    OrgProfile(),
-    // Add other widget options here if needed
-  ];
+  late List<Widget> _widgetOptions;
 
   @override
   void initState() {
     super.initState();
     _setupStream();
+    _widgetOptions = <Widget>[
+      searchpage1(),
+      EventMy(),
+      AddEvent(userID: widget.userId),
+      OrgProfile(),
+      // Add other widget options here if needed
+    ];
   }
 
   void _setupStream() {
     _stream = FirebaseFirestore.instance
-        .collection('EVENTS')  // Directly access the EVENTS collection
+        .collection('EVENTS')
         .snapshots()
         .map((eventsSnapshot) {
       List<Map<String, dynamic>> allEvents = [];
@@ -66,11 +63,6 @@ class _SocHomePageState extends State<SocHomePage> {
       return allEvents;
     });
   }
-
-
-
-
-
 
   void _onItemTapped(int index) {
     setState(() {
@@ -396,8 +388,4 @@ class HomeContent extends StatelessWidget {
   }
 }
 
-void main() {
-  runApp(MaterialApp(
-    home: SocHomePage(userId: '2CGHtfZZ2USbD0TfuUMMwKgwxAB2',), // Changed from HomePage() to SocHomePage()
-  ));
-}
+

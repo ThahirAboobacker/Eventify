@@ -7,6 +7,8 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:universe2024/admin/admhome.dart';
 import 'package:universe2024/pages/Homepage.dart';
+import 'package:universe2024/pages/orgsignup.dart';
+import 'package:universe2024/pages/selfeventlist.dart';
 import 'firebase_options.dart';
 import 'package:universe2024/pages/Splashscreen.dart';
 import 'package:universe2024/org/addevent.dart';
@@ -27,8 +29,8 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  final notificationService = NotificationService();
-  await notificationService.initialize();
+  //final notificationService = NotificationService();
+  //await notificationService.initialize();
 
   runApp(const MyApp());
 }
@@ -56,7 +58,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class NotificationService {
+/*class NotificationService {
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
@@ -101,4 +103,4 @@ class NotificationService {
       platformChannelSpecifics,
     );
   }
-}
+}*/

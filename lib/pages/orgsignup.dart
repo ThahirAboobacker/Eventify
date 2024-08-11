@@ -2,7 +2,6 @@ import 'dart:ui';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
-
 import 'package:gap/gap.dart';
 import 'package:universe2024/Utiles/app_styles.dart';
 import 'package:universe2024/pages/firebase.dart';
@@ -207,58 +206,80 @@ class _orgsignupState extends State<orgsignup> {
   }
 
   void _signUp() async {
-    String email = _emailController.text;
-    String password = _passwordController.text;
-    String Confirmpassword = _passwordController.text;
-    String name = _nameController.text;
-    String collegeName = _collegeNameController.text;
+  String email = _emailController.text.trim();
+  String password = _passwordController.text.trim();
+  String confirmPassword = _passwordController.text.trim();
+  String name = _nameController.text.trim();
+  String collegeName = _collegeNameController.text.trim();
 
-    // Check if any of the fields are empty
-    if (email.isEmpty ||
-        password.isEmpty ||
-        name.isEmpty ||
-        collegeName.isEmpty) {
-      // Update error message
-      setState(() {
-        _errorText = 'All fields are required';
-      });
-      return;
-    }
-    if (password != Confirmpassword) {
-      _errorText = 'Enter same password';
-      print("helo");
-    } else {
-      try {
-        // Perform sign up
-        User? user = await _auth.signUpWithEmailAndPassword(email, password);
-
-        if (user != null) {
-          print("User is successfully created");
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => loginpage()),
-          );
-
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .set({
-            'name': name,
-            'email': email,
-            'collegeName': collegeName,
-            'roll': 'Community',
-            'status': 'pending',
-          });
-        } else {
-          print("Some error");
-        }
-      } catch (e) {
-        // Update error message
-        setState(() {
-          _errorText = 'Error: $e';
-        });
-        print("Error during sign up: $e");
-      }
-    }
+  // Check if any of the fields are empty
+  if (email.isEmpty || password.isEmpty || name.isEmpty || collegeName.isEmpty) {
+    setState(() {
+      _errorText = 'All fields are required';
+    });
+    return;
   }
+
+  // Check if passwords match
+  if (password != confirmPassword) {
+    setState(() {
+      _errorText = 'Passwords do not match';
+    });
+    return;
+  }
+
+  try {
+    // Perform sign up
+    User? user = await _auth.signUpWithEmailAndPassword(email, password);
+
+    if (user != null) {
+      // Save the user details to Firestore
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'userId': user.uid, // Add the userId to Firestore
+        'name': name,
+        'email': email,
+        'collegeName': collegeName,
+        'roll': 'Community',
+        'status': 'pending',
+      });
+
+      // Navigate to login page after successful sign-up
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => loginpage()),
+      );
+    } else {
+      setState(() {
+        _errorText = 'Failed to create user. Please try again.';
+      });
+    }
+  } catch (e) {
+    // Handle specific FirebaseAuth errors
+    String errorMessage;
+
+    if (e is FirebaseAuthException) {
+      switch (e.code) {
+        case 'weak-password':
+          errorMessage = 'The password provided is too weak.';
+          break;
+        case 'email-already-in-use':
+          errorMessage = 'An account already exists for this email.';
+          break;
+        case 'invalid-email':
+          errorMessage = 'The email address is not valid.';
+          break;
+        default:
+          errorMessage = 'An unknown error occurred. Please try again.';
+      }
+    } else {
+      errorMessage = 'An error occurred. Please check your internet connection and try again.';
+    }
+
+    // Update error message
+    setState(() {
+      _errorText = errorMessage;
+    });
+    print("Error during sign up: $e");
+  }
+}
 }
