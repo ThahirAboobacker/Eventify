@@ -20,10 +20,9 @@ class EventDetails extends StatefulWidget {
 class _EventDetailsState extends State<EventDetails> {
   late Stream<DocumentSnapshot> _stream;
   bool _isRegistrationOpen = true;
-
-  var _userRole = 'student';
-
-
+  var _userRole = ['student'];
+  bool _isRegistered = false;
+  String _paymentStatus = '';
 
   @override
   void initState() {
@@ -32,6 +31,8 @@ class _EventDetailsState extends State<EventDetails> {
         .collection('EVENTS')
         .doc(widget.eventKey)
         .snapshots();
+    _fetchUserRole();
+    _checkRegistrationStatus();
   }
 
   void _fetchUserRole() async {
@@ -43,6 +44,28 @@ class _EventDetailsState extends State<EventDetails> {
     setState(() {
       _userRole = userDoc['roll'];
     });
+  }
+
+  void _checkRegistrationStatus() async {
+    String userId = getCurrentUserId();
+    QuerySnapshot registrationDocs = await FirebaseFirestore.instance
+        .collection('REGISTRATIONS')
+        .where('eventId', isEqualTo: widget.eventKey)
+        .where('userId', isEqualTo: userId)
+        .get();
+
+    if (registrationDocs.docs.isNotEmpty) {
+      DocumentSnapshot registrationDoc = registrationDocs.docs.first;
+      setState(() {
+        _isRegistered = true;
+        _paymentStatus = registrationDoc['PaymentStatus'];
+      });
+    } else {
+      setState(() {
+        _isRegistered = false;
+        _paymentStatus = '';
+      });
+    }
   }
 
   String getCurrentUserId() {
@@ -97,6 +120,18 @@ class _EventDetailsState extends State<EventDetails> {
                 _buildEventHeader(eventData),
                 _buildEventDetails(eventData),
                 _buildActionButtons(snapshot.data!),
+                if (_isRegistered && _paymentStatus == 'pending')
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 35, vertical: 15),
+                    child: Text(
+                      "Waiting for payment verification",
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
               ],
             ),
           );
@@ -207,7 +242,6 @@ class _EventDetailsState extends State<EventDetails> {
   }
 
   Widget _buildEventDetails(Map<String, dynamic> eventData) {
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -318,81 +352,136 @@ class _EventDetailsState extends State<EventDetails> {
   }
 
   Widget _buildRegistrationButton() {
-      return Column(
-        children: [
-          Container(
-            margin: EdgeInsets.symmetric(horizontal: 35, vertical: 15),
-            child: Text(
-              "Registration",
-              style: TextStyle(
-                color: Styles.yellowColor,
-                fontSize: 13.5,
-                fontWeight: FontWeight.w300,
+    if (_isRegistered) {
+      if (_paymentStatus == 'approved') {
+        // Navigate to QR generation page
+        WidgetsBinding.instance?.addPostFrameCallback((_) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => QrGenerationScreen(id: getCurrentUserId()),
+            ),
+          );
+        });
+        return Container();
+      } else if (_paymentStatus == 'pending') {
+        return Column(
+          children: [
+            Container(
+              margin: EdgeInsets.symmetric(horizontal: 35, vertical: 15),
+              child: Text(
+                "Waiting for payment verification",
+                style: TextStyle(
+                  color: Colors.red,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-          ),
-          Container(
-            margin: EdgeInsets.symmetric(horizontal: 35),
-            height: 34,
-            child: Row(
-              children: [
-                if (_isRegistrationOpen)
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => qrpage(),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                    ),
-                    child: Text('Register'),
-                  )
-                else
-                  ElevatedButton(
-                    onPressed: () {
-
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                    ),
-                    child: Text('Closed'),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      );
+          ],
+        );
+      }
     }
 
+    return Column(
+      children: [
+        Container(
+          margin: EdgeInsets.symmetric(horizontal: 35, vertical: 15),
+          child: Text(
+            "Registration",
+            style: TextStyle(
+              color: Styles.yellowColor,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w300,
+            ),
+          ),
+        ),
+        Container(
+          margin: EdgeInsets.symmetric(horizontal: 35),
+          height: 34,
+          child: Row(
+            children: [
+              if (_isRegistrationOpen)
+                ElevatedButton(
+                  onPressed: () async {
+                    try {
+                      // Get the current user information
+                      String userId = getCurrentUserId();
+                      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(userId)
+                          .get();
+
+                      // Get the current event information
+                      DocumentSnapshot eventDoc = await FirebaseFirestore.instance
+                          .collection('EVENTS')
+                          .doc(widget.eventKey)
+                          .get();
+
+                      // Create a new document in the REGISTRATIONS collection
+                      DocumentReference registrationRef = FirebaseFirestore.instance.collection('REGISTRATIONS').doc();
+                      await registrationRef.set({
+                        'eventName': eventDoc['eventName'],
+                        'eventId': widget.eventKey,
+                        'userName': userDoc['name'],
+                        'userId': userId,
+                        'registrationId': registrationRef.id,
+                        'PaymentStatus': 'pending',
+                        'ScannedStatus': 'pending', // Store the registration ID
+                      });
+
+                      // Optionally, retrieve the registration ID if needed
+                      String registrationId = registrationRef.id;
+                      _buildRegistrationButton();
+                    } catch (e) {
+                      print('Error during registration: $e');
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                  ),
+                  child: Text('Register'),
+                )
+              else
+                ElevatedButton(
+                  onPressed: () {},
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                  ),
+                  child: Text('Closed'),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildActionButtons(DocumentSnapshot eventDoc) {
-    return SizedBox(
-      height: 50,
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 35),
+    if (_userRole == 'Community') {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 35, vertical: 15),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             ElevatedButton(
               onPressed: () => _editEvent(eventDoc),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
+                backgroundColor: Styles.blueColor,
               ),
-              child: Text('Edit'),
+              child: Text('Edit Event'),
             ),
             ElevatedButton(
-              onPressed: () => _deleteEvent(),
+              onPressed: _deleteEvent,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
               ),
-              child: Text('Delete'),
+              child: Text('Delete Event'),
             ),
           ],
         ),
-      ),
-    );
+      );
+    }
+    return Container();
   }
 }

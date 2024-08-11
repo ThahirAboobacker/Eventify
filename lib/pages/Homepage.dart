@@ -9,8 +9,9 @@ import 'package:universe2024/pages/chatbot.dart';
 import 'package:universe2024/pages/search.dart';
 import 'package:universe2024/pages/search1.dart';
 import 'package:universe2024/pages/profile.dart';
-import 'package:universe2024/pages/my_events.dart';
-import 'package:universe2024/pages/notifications.dart'; // Import the Notifications page
+
+import 'package:universe2024/pages/notifications.dart';
+import 'package:universe2024/pages/selfeventlist.dart'; // Import the Notifications page
 
 class HomePage extends StatefulWidget {
   @override
@@ -27,7 +28,7 @@ class _HomePageState extends State<HomePage> {
     searchpage1(),
     searchpage(),
     Profile(),
-    MyEventsPage(), // Add My Events page to the widget options
+     // Add My Events page to the widget options
   ];
 
   void _onItemTapped(int index) {

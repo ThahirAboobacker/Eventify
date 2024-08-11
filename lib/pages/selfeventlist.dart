@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:universe2024/org/attendee.dart';
 
 class EventMy extends StatelessWidget {
-  final String userId = '2CGHtfZZ2USbD0TfuUMMwKgwxAB2'; // Replace with the actual user ID
+  final String userId;
+
+  EventMy({required this.userId});
 
   @override
   Widget build(BuildContext context) {
@@ -40,53 +43,13 @@ class EventMy extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => RegistrantsPage(eventId: doc.id),
+                            builder: (context) => Attendee(eventId: doc.id),
                           ),
                         );
                       },
                     ),
                   ],
                 ),
-              );
-            }).toList(),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class RegistrantsPage extends StatelessWidget {
-  final String eventId;
-
-  RegistrantsPage({required this.eventId});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Registrants'),
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('EVENT')
-            .doc(eventId)
-            .collection('registrants')
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(child: Text('No registrants found.'));
-          }
-
-          return ListView(
-            children: snapshot.data!.docs.map((doc) {
-              var registrant = doc.data() as Map<String, dynamic>;
-              return ListTile(
-                title: Text(registrant['name'] ?? 'No name'),
-                subtitle: Text(registrant['email'] ?? 'No email'),
               );
             }).toList(),
           );

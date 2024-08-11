@@ -1,5 +1,4 @@
 import 'dart:ui';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:universe2024/Utiles/app_styles.dart';
@@ -12,6 +11,7 @@ import 'package:universe2024/pages/Homepage.dart';
 import 'package:universe2024/pages/Userpage.dart';
 import 'package:universe2024/pages/chatbot.dart';
 import 'package:universe2024/org/orgprofile.dart';
+
 import 'package:universe2024/pages/qrcode.dart';
 import 'package:universe2024/pages/search1.dart';
 import 'package:universe2024/pages/selfeventlist.dart';
@@ -36,7 +36,7 @@ class _SocHomePageState extends State<SocHomePage> {
     _setupStream();
     _widgetOptions = <Widget>[
       searchpage1(),
-      EventMy(),
+      EventMy(userId: widget.userId),
       AddEvent(userID: widget.userId),
       OrgProfile(),
       // Add other widget options here if needed
@@ -56,6 +56,7 @@ class _SocHomePageState extends State<SocHomePage> {
           'eventDate': eventDoc['eventDate'],
           'eventLocation': eventDoc['eventLocation'],
           'eventPrice': eventDoc['eventPrice'],
+          'imageUrl': eventDoc['imageUrl'], // Ensure imageUrl is included
           'documentID': eventDoc.id,
         });
       }
@@ -77,6 +78,43 @@ class _SocHomePageState extends State<SocHomePage> {
     });
   }
 
+  Future<void> _checkRegistrationAndNavigate(String eventId) async {
+    String userId = widget.userId;
+    QuerySnapshot registrationDocs = await FirebaseFirestore.instance
+        .collection('REGISTRATIONS')
+        .where('eventId', isEqualTo: eventId)
+        .where('userId', isEqualTo: userId)
+        .get();
+
+    if (registrationDocs.docs.isNotEmpty) {
+      DocumentSnapshot registrationDoc = registrationDocs.docs.first;
+      String paymentStatus = registrationDoc['PaymentStatus'];
+
+      if (paymentStatus == 'approved') {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => QrGenerationScreen(id: userId),
+          ),
+        );
+      } else {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => EventDetails(eventKey: eventId),
+          ),
+        );
+      }
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => EventDetails(eventKey: eventId),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -95,7 +133,10 @@ class _SocHomePageState extends State<SocHomePage> {
               if (snapshot.hasData) {
                 List<Map<String, dynamic>> items = snapshot.data!;
 
-                return HomeContent(items: items);
+                return HomeContent(
+                  items: items,
+                  onEventTap: _checkRegistrationAndNavigate,
+                );
               }
               return Center(child: Text('No events available'));
             },
@@ -142,10 +183,12 @@ class _SocHomePageState extends State<SocHomePage> {
   }
 }
 
+
 class HomeContent extends StatelessWidget {
   final List<Map<String, dynamic>> items;
+  final Future<void> Function(String eventId) onEventTap;
 
-  const HomeContent({Key? key, required this.items}) : super(key: key);
+  const HomeContent({Key? key, required this.items, required this.onEventTap}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -242,41 +285,25 @@ class HomeContent extends StatelessWidget {
                                       scrollDirection: Axis.horizontal,
                                       itemCount: items.length,
                                       itemBuilder: (context, index) {
-                                        return Container(
-                                          margin: const EdgeInsets.symmetric(
-                                              horizontal: 5),
-                                          child: Row(
-                                            children: [
-                                              Column(
-                                                children: [
-                                                  Image.asset(
-                                                    'assets/3.jpeg',
-                                                    height: 210,
-                                                  ),
-                                                  Text('Event ${index + 1}',style: TextStyle(fontSize: 18),),
-                                                ],
-                                              ),
-                                              Gap(10),
-                                              Column(
-                                                children: [
-                                                  Image.asset(
-                                                    'assets/2.jpeg',
-                                                    height: 210,
-                                                  ),
-                                                  Text('Event ${index + 1}',style: TextStyle(fontSize: 18),),
-                                                ],
-                                              ),
-                                              Gap(10),
-                                              Column(
-                                                children: [
-                                                  Image.asset(
-                                                    'assets/1.jpeg',
-                                                    height: 210,
-                                                  ),
-                                                  Text('Event ${index + 1}',style: TextStyle(fontSize: 18),),
-                                                ],
-                                              ),
-                                            ],
+                                        Map<String, dynamic> event = items[index];
+                                        return GestureDetector(
+                                          onTap: () => onEventTap(event['documentID']),
+                                          child: Container(
+                                            margin: const EdgeInsets.symmetric(
+                                                horizontal: 5),
+                                            child: Column(
+                                              children: [
+                                                Image.network(
+                                                  event['imageUrl'],
+                                                  height: 210,
+                                                  fit: BoxFit.cover,
+                                                ),
+                                                Text(
+                                                  event['eventName'],
+                                                  style: TextStyle(fontSize: 18),
+                                                ),
+                                              ],
+                                            ),
                                           ),
                                         );
                                       },
@@ -313,57 +340,54 @@ class HomeContent extends StatelessWidget {
                                       itemCount: items.length,
                                       itemBuilder: (context, index) {
                                         Map<String, dynamic> event = items[index];
-                                        return Container(
-                                          margin: const EdgeInsets.symmetric(
-                                              horizontal: 5),
-                                          width: 220, // Adjust card width
-                                          child: Card(
-                                            elevation: 3,
-                                            child: Column(
-                                              mainAxisAlignment:
-                                              MainAxisAlignment.start,
-                                              children: [
-                                                Padding(
-                                                  padding:
-                                                  const EdgeInsets.all(8.0),
-                                                  child: Column(
-                                                    children: [
-                                                      Image.asset(
-                                                        'assets/3.jpeg',
-                                                        height: 135,
-                                                      ),
-                                                      const SizedBox(
-                                                          height: 10),
-                                                      Text(
-                                                        event['eventName'],
-                                                        style: TextStyle(
-                                                          fontSize: 18,
-                                                          fontWeight:
-                                                          FontWeight.bold,
+                                        return GestureDetector(
+                                          onTap: () => onEventTap(event['documentID']),
+                                          child: Container(
+                                            margin: const EdgeInsets.symmetric(
+                                                horizontal: 5),
+                                            width: 220, // Adjust card width
+                                            child: Card(
+                                              elevation: 3,
+                                              child: Column(
+                                                mainAxisAlignment:
+                                                MainAxisAlignment.start,
+                                                children: [
+                                                  Padding(
+                                                    padding:
+                                                    const EdgeInsets.all(8.0),
+                                                    child: Column(
+                                                      children: [
+                                                        Image.network(
+                                                          event['imageUrl'],
+                                                          height: 135,
+                                                          fit: BoxFit.cover,
                                                         ),
-                                                      ),
-                                                      const SizedBox(height: 5),
-                                                      Text(
-                                                        'Date: ${event['eventDate']}\nEvent Type: ${event['eventtype']}\nPrice: ${event['eventPrice']}',
-                                                        style: TextStyle(
-                                                          fontSize: 16,
+                                                        const SizedBox(
+                                                            height: 10),
+                                                        Text(
+                                                          event['eventName'],
+                                                          style: TextStyle(
+                                                            fontSize: 18,
+                                                            fontWeight:
+                                                            FontWeight.bold,
+                                                          ),
                                                         ),
-                                                      ),
-                                                    ],
+                                                        const SizedBox(height: 5),
+                                                        Text(
+                                                          'Date: ${event['eventDate']}\nEvent Type: ${event['eventtype']}\nPrice: ${event['eventPrice']}',
+                                                          style: TextStyle(
+                                                            fontSize: 16,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
                                                   ),
-                                                ),
-                                                TextButton(
-                                                  onPressed: () {
-                                                    Navigator.push(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                          builder: (context) => EventDetails(
-                                                eventKey: event['documentID']),
-                                                    ));
-                                                  },
-                                                  child: Text('View',style: TextStyle(fontSize: 18),),
-                                                ),
-                                              ],
+                                                  TextButton(
+                                                    onPressed: () => onEventTap(event['documentID']),
+                                                    child: Text('View',style: TextStyle(fontSize: 18),),
+                                                  ),
+                                                ],
+                                              ),
                                             ),
                                           ),
                                         );
@@ -387,5 +411,3 @@ class HomeContent extends StatelessWidget {
     );
   }
 }
-
-

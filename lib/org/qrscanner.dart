@@ -130,7 +130,7 @@ void getDetailsOfScanned(BuildContext context, String code) {
             db
                 .collection("REGISTRATIONS")
                 .doc(element.id)
-                .set({"scanned_status": "YES"}, SetOptions(merge: true));
+                .set({"ScannedStatus": "approved"}, SetOptions(merge: true));
           }
 
           const snackBar = SnackBar(
