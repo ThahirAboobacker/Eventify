@@ -14,6 +14,7 @@ import 'package:EventON/pages/Signuppage.dart';
 import 'package:EventON/pages/Splashscreen.dart';
 import 'package:EventON/pages/firebase.dart';
 import 'package:EventON/pages/loginas.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class loginpage extends StatefulWidget {
   const loginpage({Key? key});
@@ -239,7 +240,7 @@ class _loginpageState extends State<loginpage> {
         .collection('users')
         .doc(user!.uid)
         .get()
-        .then((DocumentSnapshot documentSnapshot) {
+        .then((DocumentSnapshot documentSnapshot) async {
       if (documentSnapshot.exists) {
         if (documentSnapshot.get('roll') == 'Community' &&
             documentSnapshot.get('status') == 'pending') {
@@ -248,7 +249,8 @@ class _loginpageState extends State<loginpage> {
               content: Text('Admin not approved yet, Please contact the admin'),
             ),
           );
-        } else if (documentSnapshot.get('roll') == 'student') {
+          var sharedPref = await SharedPreferences.getInstance();
+          sharedPref.setBool(SplashScreenState.KEYLOGIN, true);
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -256,6 +258,8 @@ class _loginpageState extends State<loginpage> {
             ),
           );
         } else if (documentSnapshot.get('roll') == 'Admin'){
+          var sharedPref = await SharedPreferences.getInstance();
+          sharedPref.setBool(SplashScreenState.KEYLOGIN, true);
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -264,6 +268,8 @@ class _loginpageState extends State<loginpage> {
           );
         }
         else {
+          var sharedPref = await SharedPreferences.getInstance();
+          sharedPref.setBool(SplashScreenState.KEYLOGIN, true);
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
